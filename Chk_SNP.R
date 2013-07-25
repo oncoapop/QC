@@ -51,6 +51,9 @@ infile1=paste(pydir, pyfile, sep="/")
 # Input #3 which is the AmpliconManfest file
 infile2=paste(paste(workdir,sample,sep="/"), manfile, sep="/")
 
+# Output file
+outfile=paste(paste(workdir,sample,sep="/"), "SNP_Checked.csv", sep="/")
+
 cluster=as.data.frame(read.table(infile1, header=TRUE, stringsAsFactors = FALSE))
 manifest=as.data.frame(read.table(infile2, header=TRUE, skip=5, sep="\t", stringsAsFactors = FALSE))
 
@@ -111,16 +114,16 @@ for (ri in seq(nrow(indf))) {
 						# Testing to see if the sequence are identical, if they are they do not contain SNPs
 						
 									if (ampliseq == snpampliseq) ampsnp <- "ok" else { ampsnp <- "SNP" }
-									if (lpriseq == snplpriseq) ampsnp <- "ok" else { ampsnp <- "SNP" }
-									if (rpriseq == snprpriseq) ampsnp <- "ok" else { ampsnp <- "SNP" }
+									if (lpriseq == snplpriseq) lprisnp <- "ok" else { lprisnp <- "SNP" }
+									if (rpriseq == snprpriseq) rprisnp <- "ok" else { rprisnp <- "SNP" }
 						
 						
 # writing the output to the dataframe 
-											outdf$ID[ri] <- id
+			outdf$ID[ri] <- id
                      	outdf$Clus[ri] <- clus
-                     	outdf$AmpSNP[ri] <- 0
-                     	outdf$LpriSNP[ri] <- 0
-                     	outdf$RpriSNP[ri] <- 0
+                     	outdf$AmpSNP[ri] <- ampsnp
+                     	outdf$LpriSNP[ri] <- lprisnp
+                     	outdf$RpriSNP[ri] <- rprisnp
                      	outdf$Lpriseq[ri] <- lpriseq
                      	outdf$Rpriseq[ri] <- rpriseq
                      	outdf$Ampliseq[ri] <- ampliseq
@@ -131,4 +134,5 @@ for (ri in seq(nrow(indf))) {
 						}
   }
   
-
+# output file
+write.csv(outdf, file = outfile)
