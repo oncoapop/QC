@@ -10,12 +10,14 @@
 
 # These commands must be specifed in order for this script to work
 # source("http://www.bioconductor.org/biocLite.R"); source("http://www.bioconductor.org/biocLite.R"); biocLite("BSgenome"); biocLite("BSgenome.Hsapiens.UCSC.hg19"); library('BSgenome.Hsapiens.UCSC.hg19')
+# install.packages("XLConnect")
 
 library(Biostrings)
 library("IRanges")
 library("GenomicRanges")
 library(Rsamtools)
 library('BSgenome.Hsapiens.UCSC.hg19')
+library(XLConnect)
 
 # Load the latest available dnSNP for the version of bioconductor if not installed 
 len <-  length(available.SNPs())
@@ -41,16 +43,66 @@ workdir=paste(basedir,project, sep="/")
 
 manfile=paste(sample,"sc.AmpliconManifest",sep="")
 
-
 ######################################################
-# Input #3 which is the AmpliconManfest file
-infile2=paste(paste(workdir,sample,sep="/"), manfile, sep="/")
+# Input #2 which is the AmpliconManfest file
+# set input directory
+indir=paste(workdir,sample,sep="/")
+infile2=paste(indir, manfile, sep="/")
+
+# Input #1 is the primer excel sheet
+setwd(indir)
+pat=paste(paste(sample,"Primers", sep="_"),"*.*plates.xls", sep="_")
+file_name = list.files(pattern = pat)
+file = paste(indir,file_name, sep="/")
+
+# workbook <- system.file(file, package = "XLConnect")
+# Load workbook
+wb <- loadWorkbook(file, create = FALSE)
+# Query available worksheets
+sheets <- getSheets(wb)
+
+# This command reads all the sheets in a workbook into a data_list
+primers <- readWorksheet(wb, sheets)
 
 # Output file
 outfile=paste(paste(workdir,sample,sep="/"), "SNP_Checked_all.csv", sep="/")
 
 manifest=as.data.frame(read.table(infile2, header=TRUE, skip=5, sep="\t", stringsAsFactors = FALSE))
 
+primerlist <- data.frame(ID = rep("", nrow(primers)),
+                     Lpriseq = rep("None", nrow(primers)),
+                     Rpriseqr = rep("None", nrow(primers)),
+                     stringsAsFactors = FALSE)
+                     
+for (rj in seq(nrow(primers))) {
+
+		chr <- primers$Chr[rj]
+		pos <- primers$Posn[rj]
+		left <- primers$F_primer[rj]
+		right <- primers$R_primer[rj]
+
+		id <- paste(chr,pos, sep="_")
+		# Removal of adaptors (Fluidigm)
+		leftadapt="ACACTGACGACATGGTTCTACA"
+		# (5'->3' of reverse adaptor)
+		rightadapt="TACGGTAGCAGAGACTTGGTCT"
+
+		# removal of the adaptor sequences from ordered primers
+		lpriseq <- gsub("ACACTGACGACATGGTTCTACA", "", left)
+		rpriseq <- gsub("TACGGTAGCAGAGACTTGGTCT", "", right)
+		
+		# Reverse Complement the Right primer without adaptor
+		x <- DNAString(rpriseq)
+		rpriseqr <- as.character(reverseComplement(x))
+		
+		primerlist$ID[rj] <- id
+		primerlist$Lpriseq[rj] <- lpriseq
+		primerlist$Rpriseqr[rj] <- rpriseqr
+
+
+			}
+			
+			
 outdf <- data.frame(ID = rep("", nrow(manifest)),
                      Clus = rep("", nrow(manifest)),
                      AmpSNP = rep("", nrow(manifest)),
