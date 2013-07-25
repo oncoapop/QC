@@ -81,7 +81,7 @@ for (rj in seq(nrow(primers))) {
 		left <- primers$F_primer[rj]
 		right <- primers$R_primer[rj]
 
-		id <- paste(chr,pos, sep="_")
+		id <- paste("chr", paste(chr,pos, sep="_"), sep="")
 		# Removal of adaptors (Fluidigm)
 		leftadapt="ACACTGACGACATGGTTCTACA"
 		# (5'->3' of reverse adaptor)
@@ -104,7 +104,7 @@ for (rj in seq(nrow(primers))) {
 			
 			
 outdf <- data.frame(ID = rep("", nrow(manifest)),
-                     Clus = rep("", nrow(manifest)),
+
                      AmpSNP = rep("", nrow(manifest)),
                      LpriSNP = rep("", nrow(manifest)),
                      RpriSNP = rep("", nrow(manifest)),
@@ -116,39 +116,44 @@ outdf <- data.frame(ID = rep("", nrow(manifest)),
                      SNPAmpliseq = rep("NA", nrow(manifest)),                      
                      stringsAsFactors = FALSE)
 
-for (ri in seq(nrow(indf))) {
+for (ri in seq(nrow(manifest))) {
   
 	        	id <- manifest$Name[ri]
     			chr <- manifest$Chromosome[ri]
-  			start <-  as.numeric(manifest$Amplicon.Start[ri])+1
-			end <-  as.numeric(manifest$Amplicon.End[ri])+1
-			leftlen <-  as.numeric(manifest$Upstream.Probe.Length[ri])
-			rgtlen <-  as.numeric(manifest$Downstream.Probe.Length[ri])
+    			
+    			# We have to correct since there was a shift in the manifest
+  			start <-  as.numeric(manifest$Amplicon.Start[ri])+2
+			end <-  as.numeric(manifest$Amplicon.End[ri])-2
+			leftlen <-  as.numeric(manifest$Upstream.Probe.Length[ri])-2
+			rgtlen <-  as.numeric(manifest$Downstream.Probe.Length[ri])-2
+			
+			# find id from manifest in the col 1 (amplicon ID), col 2 (left) and 3 (right)
+			leftprimer <-  primerlist[primerlist[,1] %in% c(id),2]
+			rightprimer <-  primerlist[primerlist[,1] %in% c(id),3]
 
 # Get the amplicons 1. Reference and 2. SNPmasked
  						ampliseq <- as.character(getSeq(Hsapiens,chr,start,end))
  						snpampliseq <- as.character(getSeq(SNP_Hsapiens,chr,start,end))
  
-# Get left and right primers 1. Ref 2. SNPmasked 
+# Get left and right primers 1. Designed Seq 2. SNPmasked 
 						leftend <- start + leftlen
-						lpriseq <- as.character(getSeq(Hsapiens,chr,start,leftend))
+						lpriseq <- leftprimer
 						snplpriseq <- as.character(getSeq(SNP_Hsapiens,chr,start,leftend))
 
 						rightstart <- end - rgtlen
-						rpriseq <- as.character(getSeq(Hsapiens,chr,rightstart,end))
+						rpriseq <- rightprimer
 						snprpriseq <- as.character(getSeq(SNP_Hsapiens,chr,rightstart,end))
 
 						# Testing to see if the sequence are identical, if they are they do not contain SNPs
 
-									if (ampliseq == snpampliseq) ampsnp <- "ok" else { ampsnp <- "SNP" }
-									if (lpriseq == snplpriseq) lprisnp <- "ok" else { lprisnp <- "SNP" }
-									if (rpriseq == snprpriseq) rprisnp <- "ok" else { rprisnp <- "SNP" }
+						if (ampliseq == snpampliseq) ampsnp <- "ok" else { ampsnp <- "SNP" }
+						if (lpriseq == snplpriseq) lprisnp <- "ok" else { lprisnp <- "SNP" }
+						if (rpriseq == snprpriseq) rprisnp <- "ok" else { rprisnp <- "SNP" }
 
 
 # writing the output to the dataframe 
 			outdf$ID[ri] <- id
-                     	outdf$Clus[ri] <- clus
-                     	outdf$AmpSNP[ri] <- ampsnp
+                      	outdf$AmpSNP[ri] <- ampsnp
                      	outdf$LpriSNP[ri] <- lprisnp
                      	outdf$RpriSNP[ri] <- rprisnp
                      	outdf$Lpriseq[ri] <- lpriseq
