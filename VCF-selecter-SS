@@ -2,7 +2,7 @@
 
 # This script checks the master position file and then calls off the mutations
 # from their VCF and makes them into another file for R processing
-# THis sciprt is for single cell analysis
+# This script is for single cell analysis
 
 #######################
 #Change this to run ID
@@ -31,7 +31,7 @@ pos="/share/lustre/backup/dyap/Projects/Tumour_Evol/SA494/Final_positions_SA494.
 ##############################################################
 # Change this to where the output should go - Project dependent
 
-outdir="/home/dyap/Projects/Single_Cell/Analysis/"$name
+outdir="/home/dyap/Projects/Single_Cell/Analysis/"$name"/"$name
 # outdir="/home/dyap/Projects/Tumour_Evol/"$name
 mkdir $outdir
 
