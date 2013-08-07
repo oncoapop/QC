@@ -25,8 +25,8 @@ library(lattice)
 
 # For Pipeline QC
 # Name of Single Cell Sample
-name="SA496"
-RUNID="A4FW0"
+name="SA429"
+RUNID="A4GFU"
 
 # MOMAC 14
 # RunID="130603_M00897_0033_000000000-A49AR"
@@ -62,6 +62,7 @@ if ( expt == "selected" && type == "freq") append="freq"
 
 csvfile=paste(paste(name,append,sep="-"),"csv",sep=".")
 pdffile=paste(paste(name,append,sep="-"),"pdf",sep=".")
+namefile=paste(paste(paste("Name", name, sep="-"), append, sep="-"),"csv",sep=".")
 
 graphtitle=paste(expt, paste(paste(paste(type, name, sep=" "), "Run-ID", sep=" "), RUNID, sep="-"), sep=" ")
 
@@ -96,7 +97,10 @@ count <- createCounter(1)
 #########################################################
 
 
-
+name.frame <- data.frame(	Sample_ID = rep("", samples),
+			filename = rep("", samples),
+			Description = rep("", samples),
+			stringsAsFactors = FALSE)
 
 sumdf <- data.frame(	Sample_ID = rep("", samples),
 			Variants = rep(0, samples),
@@ -169,28 +173,30 @@ assign(paste("Nuclei", rj, sep=""), d.frame)
 
 
 ################################### STOP HERE AND CHECK COLUMN NAMES FOR LABELLING OF CONTROLS
+name.frame$filename[]<-file_names[]
+name.frame$Sample_ID<-names(sum1)[2:(samples+1)]
 sumdf
 
 # Check list(vcf_list)
-names(sum1)
+#names(sum1)
 
 # Labels for Main Run files
-names(sum1)[2] <- "SA496-CD45-"
-names(sum1)[3] <- "SA496-CD45+"
-names(sum1)[4] <- "SA496-Normal"
-names(sum1)[5] <- "SA496-Tumor"
-names(sum1)[6] <- "SA496-X1B"
-names(sum1)[7] <- "SA496-X1C"
-names(sum1)[8] <- "SA496-X1"
-names(sum1)[9] <- "SA496-X2B"
-names(sum1)[10] <- "SA496-X2C"
-names(sum1)[11] <- "SA496-X2D"
-names(sum1)[12] <- "SA496-X2"
-names(sum1)[13] <- "SA496-X3"
-names(sum1)[14] <- "SA496-X4"
+for (des in seq(samples)) 
+	{
+	point<-des+1
+	names(sum1)[point] <- strsplit(name.frame$filename[des],split="_S")[[1]][1]
+	name.frame$Description[des] <- strsplit(name.frame$filename[des],split="_S")[[1]][1]
+	}
+
+# Check that that autolabelling is correct
+name.frame
+
 
 #####################################
+# Write checkfiles
+write.table(name.frame,file=namefile,sep=",",row.names=FALSE,col.names=TRUE)
 
+# Write csv
 write.table(sum1,file=csvfile,sep=",",row.names=FALSE,col.names=TRUE)
 # write.table(obj_name,file="C:\\Users\\dyap_000\\Documents\\R\\SA494\\SA494.csv",sep=",",append=TRUE,row.names=FALSE,col.names=FALSE)
 
