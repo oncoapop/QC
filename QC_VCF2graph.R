@@ -25,7 +25,7 @@ library(lattice)
 
 # For Pipeline QC
 # Name of Single Cell Sample
-name="SA429"
+name="SA501"
 RUNID="A4GFU"
 
 # MOMAC 14
@@ -48,8 +48,8 @@ setwd(direc)
 
 
 # Select type of variants
-expt="all"
-#expt="selected"
+#expt="all"
+expt="selected"
 # Select type of QC - only one type
 type="freq"
 # type="reads"
@@ -77,7 +77,8 @@ graphtitle=paste(expt, paste(paste(paste(type, name, sep=" "), "Run-ID", sep=" "
 if ( expt == "all") pat =paste(name, "*.*[0-9].vcf", sep="")
 if ( expt == "selected") pat =paste(name, "*.*[0-9].svcf", sep="")
 
-file_names = list.files(pattern = pat);
+#file_names = list.files(pattern = pat)
+file_names = list.files(pattern = pat)
 
 # Extract all the VCFs into a concatenated VCF list
 vcf_list = lapply(file_names, readVcf, "hg19", sep = "\t")
@@ -191,8 +192,14 @@ for (des in seq(samples))
 # Check that that autolabelling is correct
 name.frame
 
+# Removing duplicates
+sum2<-sum1
+sum1<-sum2[!duplicated(lapply(sum2, summary))]
 
-#####################################
+########################################
+# STOP HERE TO CHECK BEFORE PROCEEDING #
+########################################
+
 # Write checkfiles
 write.table(name.frame,file=namefile,sep=",",row.names=FALSE,col.names=TRUE)
 
