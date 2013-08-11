@@ -90,7 +90,7 @@ if (check == "depth" ) names(d.frame)[2] <- "Seqdepth"
 
 for (ri in seq(len) ) 	{
 # This extracts the postion information instead of the rs name for dbSNP positions (chr_position)
-d.frame$ID[ri] <- paste(gsub("chr","",seqnames(vcf_list[[rj]][ri])), as.character(ranges(vcf_list[[rj]][ri])),sep="_")
+d.frame$ID[ri] <- paste(gsub("chr","",seqnames(vcf_list[[rj]][ri])), as.character(start(vcf_list[[rj]][ri])),sep="_")
 #	d.frame$ID[ri] <- rownames(vcf_list[[rj]][ri])
 if (check == "calls")	d.frame$Calls[ri] <- geno(vcf_list[[rj]][ri])$GT
 if (check == "freq")	d.frame$Varalfreq[ri] <- geno(vcf_list[[rj]][ri])$VF
