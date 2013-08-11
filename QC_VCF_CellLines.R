@@ -246,6 +246,7 @@ for (j in seq(nrow(ff)))
 		{
 		rsc$Col[j] <- test
 		} else {
+		# Unclassified positions
 		rsc$Col[j] <- rowcol[n+1]
 		}
 		
@@ -254,7 +255,7 @@ for (j in seq(nrow(ff)))
 # Plot Colours
 # heatmap(ef, Rowv=NA, Colv=NA, col = heat.colors(1024), scale="column", margins=c(5,10))
 # hmcols<-colorRampPalette(c("dark green","red"))(100)
-hmcols <- colorRampPalette(brewer.pal(11,"Spectral"))(10)
+hmcols <- colorRampPalette(brewer.pal(11,"Spectral"))(100)
 # display.brewer.all()
 ################################################### HEatMaps2
 
