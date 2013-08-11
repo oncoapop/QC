@@ -254,7 +254,7 @@ for (j in seq(nrow(ff)))
 # Plot Colours
 # heatmap(ef, Rowv=NA, Colv=NA, col = heat.colors(1024), scale="column", margins=c(5,10))
 # hmcols<-colorRampPalette(c("dark green","red"))(100)
-hmcols <- colorRampPalette(brewer.pal(11,"Spectral"))(100)
+hmcols <- colorRampPalette(brewer.pal(11,"Spectral"))(10)
 # display.brewer.all()
 ################################################### HEatMaps2
 
@@ -267,7 +267,7 @@ pdf(pdffile2, width=7, height=8)
 heatmap.2(ff, main=title, xlab=xaxislab2, ylab="Positions", scale="none", key = TRUE
 , cexCol=0.8, cexRow=0.6, col = hmcols, RowSideColors=rsc$Col, trace="none")
 
-legend("top",legend=legend, fill=fill, border=TRUE, bty="o", y.intersp = 0.7, cex=0.7)
+legend("topright",legend=legend, fill=fill, border=TRUE, bty="o", y.intersp = 0.7, cex=0.7)
 
 dev.off()
 
