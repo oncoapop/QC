@@ -1,3 +1,5 @@
+# QC For Cell line mixing project
+
 # source("http://www.bioconductor.org/biocLite.R"); biocLite("VariantAnnotation")
 library("VariantAnnotation")
 library("IRanges")
@@ -6,6 +8,8 @@ library(foreign)
 library(lattice)
 require(Heatplus)
 library(limma)
+library(gplots)
+library(RColorBrewer)
 #####
 
 #####################################################################################################
@@ -31,10 +35,19 @@ output=paste(dir,filename,sep="\\")
 
 csvfile=paste(output, "csv", sep=".")
 pdffile=paste(output, "pdf", sep=".")
+pdffile2=paste(output, "cluster.pdf", sep="")
 vennfile=paste(output, "Venn.pdf", sep="-")
 
 title=filename
 xaxislab=paste(sample, "Sample", sep=" ")
+
+# Read in all positions
+htert<-read.table(file="htert_pos.txt")
+htert$V3 <-"htert"
+hct116<-read.table(file="hct116_pos.txt")
+hct116$V3<-"hct116"
+shared<-read.table(file="shared_pos.txt")
+shared$V3 <- "shared"
 
 ####################################################################################################
 
@@ -128,8 +141,49 @@ write.table(sum1,file=csvfile,sep=",",row.names=FALSE,col.names=TRUE)
 
 
 ###################################
+## Processing position information
 
-# Drawing heatmap
+# combine into one file
+hh<-rbind(hct116,htert)
+all<-rbind(shared,hh)
+
+# Select n colors
+n <- length(table(all$V3))
+rowcol<-brewer.pal(n+1, "Accent")
+
+posinfo <- data.frame(	ID = rep("", nrow(all)),
+			Type = rep("", nrow(all)),
+			Col = rep("", nrow(all)),
+			stringsAsFactors = FALSE)
+
+for (a in seq(nrow(all)))
+	{
+	chr <- all$V1[a]
+	pos <- all$V2[a]
+	type <- all$V3[a]
+
+	posinfo$ID[a] <- paste(chr, pos, sep="_")
+	posinfo$Type[a] <- type
+	
+	for ( b in seq(n) )
+		{
+		if (type == names(table(all$V3)[b])) color=rowcol[b]
+		}
+
+	posinfo$Col[a] <- color
+
+	}
+
+
+# Legend info posinfo$Types and posinfo$Col
+legend=rownames(table(posinfo[2:3]))
+legend[n+1]="unclassified"
+
+fill=colnames(table(posinfo[2:3]))
+fill[n+1]=rowcol[n+1]
+
+#####################################
+# Preparing the data for clustering (removing NAs)
 
 # Must be convert into a data.matrix (non-numeric converted to N/A)
 ef <- data.matrix(sum1[2:ncol(sum1)])
@@ -177,8 +231,47 @@ ff[is.na(ff)] <- 0
  # cex = 1, counts.col = "red")
 #dev.off()
 
+# Rowside color matrix
+rsc <- data.frame(	ID = rep("", nrow(ff)),
+			Col = rep("", nrow(ff)),
+			stringsAsFactors = FALSE)
+
+# Get the colors for different types of positions
+for (j in seq(nrow(ff)))
+	{
+	match <- rownames(ff)[j]
+	rsc$ID[j]<- match
+	test <- posinfo[posinfo[,1] %in% c(match),3]
+	if (length(test) != 0) 
+		{
+		rsc$Col[j] <- test
+		} else {
+		rsc$Col[j] <- rowcol[n+1]
+		}
+		
+	}
+
+# Plot Colours
 # heatmap(ef, Rowv=NA, Colv=NA, col = heat.colors(1024), scale="column", margins=c(5,10))
-hmcols<-colorRampPalette(c("dark green","red"))(100)
+# hmcols<-colorRampPalette(c("dark green","red"))(100)
+hmcols <- colorRampPalette(brewer.pal(11,"Spectral"))(100)
+# display.brewer.all()
+################################################### HEatMaps2
+
+title="HCT116-hTert Cell Mixing Expt (All Var Freq)"
+
+xaxislab2=paste("Samples from Run", run, sep=" ")
+
+pdf(pdffile2, width=7, height=8)
+
+heatmap.2(ff, main=title, xlab=xaxislab2, ylab="Positions", scale="none", key = TRUE
+, cexCol=0.8, cexRow=0.6, col = hmcols, RowSideColors=rsc$Col, trace="none")
+
+legend("top",legend=legend, fill=fill, border=TRUE, bty="o", y.intersp = 0.7, cex=0.7)
+
+dev.off()
+
+########################################################## levelplot
 
 title="Level Plot QC of HCT116-hTert mixing expt"
 
