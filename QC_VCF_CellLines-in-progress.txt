@@ -202,7 +202,7 @@ rownames(ef) <- sum1$ID
 colnames(ef)
 ff<-ef[,order(as.numeric(colnames(ef)))]
 
-# If fiolt=NULL then all primers work so NA = zero
+# If filt=NULL then all primers work so NA = zero
 ff[is.na(ff)] <- 0
 
 ##############################################
@@ -272,6 +272,54 @@ legend("topright",legend=legend, fill=fill, border=TRUE, bty="o", y.intersp = 0.
 
 dev.off()
 
+##############################PLOT SELECTED VARIANTS ONLY ##########################
+
+# New matrix gf (selected positions)
+
+gf <- ff[rownames(ff) %in% posinfo$ID,]
+
+# Rowside color matrix
+rsc <- data.frame(	ID = rep("", nrow(gf)),
+			Col = rep("", nrow(gf)),
+			stringsAsFactors = FALSE)
+
+# Get the colors for different types of positions
+for (j in seq(nrow(gf)))
+	{
+	match <- rownames(gf)[j]
+	rsc$ID[j]<- match
+	test <- posinfo[posinfo[,1] %in% c(match),3]
+	if (length(test) != 0) 
+		{
+		rsc$Col[j] <- test
+		} else {
+		# Unclassified positions
+		rsc$Col[j] <- rowcol[n+1]
+		}
+		
+	}
+
+# Plot Colours
+# heatmap(ef, Rowv=NA, Colv=NA, col = heat.colors(1024), scale="column", margins=c(5,10))
+# hmcols<-colorRampPalette(c("dark green","red"))(100)
+hmcols <- colorRampPalette(brewer.pal(11,"Spectral"))(100)
+# display.brewer.all()
+################################################### HEatMaps2
+
+title="HCT116-hTert Cell Mixing Expt (Sel Var Freq)"
+
+xaxislab2=paste("Samples from Run", run, sep=" ")
+
+pdf(pdffile2, width=7, height=8)
+
+heatmap.2(gf, main=title, xlab=xaxislab2, ylab="Positions", scale="none", key = TRUE
+, cexCol=0.8, cexRow=0.6, col = hmcols, RowSideColors=rsc$Col, trace="none")
+
+legend("topright",legend=legend, fill=fill, border=TRUE, bty="o", y.intersp = 0.7, cex=0.7)
+
+dev.off()
+
+#########################END SELECTED VARIANTS ####################################
 ########################################################## levelplot
 
 title="Level Plot QC of HCT116-hTert mixing expt"
