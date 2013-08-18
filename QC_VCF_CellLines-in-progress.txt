@@ -36,6 +36,7 @@ output=paste(dir,filename,sep="\\")
 csvfile=paste(output, "csv", sep=".")
 pdffile=paste(output, "pdf", sep=".")
 pdffile2=paste(output, "cluster.pdf", sep="")
+pdffile3=paste(output, "cluster2.pdf", sep="")
 vennfile=paste(output, "Venn.pdf", sep="-")
 
 title=filename
@@ -242,16 +243,16 @@ for (a in seq(nrow(prop)))
 
 
 # Colside color matrix
-csc <- data.frame(	Sam = rep("", nrow(ff)),
-			Col = rep("", nrow(ff)),
+csc <- data.frame(	Sam = rep("", ncol(ff)),
+			Col = rep("", ncol(ff)),
 			stringsAsFactors = FALSE)
 
 # Get the colors for different sample proportions
-for (j in seq(nrow(ff)))
+for (j in seq(ncol(ff)))
 	{
 	match <- colnames(ff)[j]
-	csc$ID[j]<- match
-	test <- posinfo[posinfo[,1] %in% c(match),3]
+	csc$Sam[j]<- match
+	test <- propinfo[propinfo[,1] %in% c(match),4]
 	if (length(test) != 0) 
 		{
 		csc$Col[j] <- test
@@ -291,14 +292,20 @@ title="HCT116-hTert Cell Mixing Expt (All Var Freq)"
 
 xaxislab2=paste("Samples from Run", run, sep=" ")
 
-pdf(pdffile2, width=7, height=8)
+pdf(pdffile3, width=7, height=8)
 
 heatmap.2(ff, main=title, xlab=xaxislab2, ylab="Positions", scale="none", key = TRUE
-, cexCol=0.8, cexRow=0.6, col = hmcols, RowSideColors=rsc$Col, trace="none")
+, cexCol=0.8, cexRow=0.6, col = hmcols, RowSideColors=rsc$Col, ColSideColors=csc$Col, trace="none")
 
 legend("topright",legend=legend, fill=fill, border=TRUE, bty="o", y.intersp = 0.7, cex=0.7)
 
 dev.off()
+
+
+
+###########################UNDER DEV#################################
+
+
 
 ##############################PLOT SELECTED VARIANTS ONLY ##########################
 
