@@ -36,6 +36,7 @@ output=paste(dir,filename,sep="\\")
 csvfile=paste(output, "csv", sep=".")
 pdffile=paste(output, "pdf", sep=".")
 pdffile2=paste(output, "cluster.pdf", sep="")
+pdffile3=paste(output, "cluster2.pdf", sep="")
 vennfile=paste(output, "Venn.pdf", sep="-")
 
 title=filename
@@ -48,6 +49,10 @@ hct116<-read.table(file="hct116_pos.txt")
 hct116$V3<-"hct116"
 shared<-read.table(file="shared_pos.txt")
 shared$V3 <- "shared"
+
+# Read in Sample Names and Mixing proportions
+prop<-read.table(file="MiSeq samples 18 Jul.txt" ,sep="\t", header=TRUE)
+
 
 ####################################################################################################
 
@@ -208,29 +213,53 @@ ff[is.na(ff)] <- 0
 ##############################################
 
 # Label according to samplesheet
-# Since S1=1, we leave it for Cell lines
-#colnames(ef)[1] = "SA494-T"
-#colnames(ef)[2] = "SA494-N"
-#colnames(ef)[3] = "SA494-X4nonWGA"
-#colnames(ef)[4] = "SA494-X4x3"
-#colnames(ef)[5] = "SA494-X4"
+# Select n colors (first 2 colors from row Col ie cell lines)
 
-# Venn Diagram
-#Tumour <- (ef[,1] >= 0.2)
-#Normal <- (ef[,2] >= 0.2)
-#X4_nonWGA <- (ef[,3] >= 0.2)
-#X4_triplex <- (ef[,4] >= 0.2)
-#X4_Single <- (ef[,5] >= 0.2)
-#c3 <- cbind(Tumour,Normal,X4_nonWGA,X4_triplex,X4_Single)
-#c3 <- cbind(X4_Single,X4_triplex)
-#a <- vennCounts(c3)
-#pdf(vennfile, width=6, height=6)
-#vennDiagram(a, main="Variant SNV positions SA494 > 0.2 Alt Allele Freq")
-#vennDiagram(a, include = "both", 
- # names = c("High Writing", "High Math", "High Reading"), 
- # cex = 1, counts.col = "red")
-#dev.off()
+col2<-rowcol[1:2]
 
+colcols <- colorRampPalette(brewer.pal(11,"PRGn"))(1000)
+
+propinfo <- data.frame(	Sample = rep("", nrow(prop)),
+			Tertp = rep("", nrow(prop)),
+			HCTp = rep("", nrow(prop)),
+			Col = rep("", nrow(prop)),
+			stringsAsFactors = FALSE)
+			
+
+for (a in seq(nrow(prop)))
+	{
+	propinfo$Sample[a] <- prop$Sample[a]
+	propinfo$Tertp[a] <- prop$hTert[a]
+	propinfo$HCTp[a] <- prop$HCT116[a]
+
+	if (prop$hTert[a]*1000 < 1) 
+		{
+		propinfo$Col[a] <- colcols[1]
+		} else {
+			propinfo$Col[a] <- colcols[prop$hTert[a]*1000]
+			}
+	}
+
+
+
+# Colside color matrix
+csc <- data.frame(	Sam = rep("", ncol(ff)),
+			Col = rep("", ncol(ff)),
+			stringsAsFactors = FALSE)
+
+# Get the colors for different sample proportions
+for (j in seq(ncol(ff)))
+	{
+	match <- colnames(ff)[j]
+	csc$Sam[j]<- match
+	test <- propinfo[propinfo[,1] %in% c(match),4]
+	if (length(test) != 0) 
+		{
+		csc$Col[j] <- test
+		} 
+		
+	}
+	
 # Rowside color matrix
 rsc <- data.frame(	ID = rep("", nrow(ff)),
 			Col = rep("", nrow(ff)),
@@ -263,14 +292,20 @@ title="HCT116-hTert Cell Mixing Expt (All Var Freq)"
 
 xaxislab2=paste("Samples from Run", run, sep=" ")
 
-pdf(pdffile2, width=7, height=8)
+pdf(pdffile3, width=7, height=8)
 
 heatmap.2(ff, main=title, xlab=xaxislab2, ylab="Positions", scale="none", key = TRUE
-, cexCol=0.8, cexRow=0.6, col = hmcols, RowSideColors=rsc$Col, trace="none")
+, cexCol=0.8, cexRow=0.6, col = hmcols, RowSideColors=rsc$Col, ColSideColors=csc$Col, trace="none")
 
 legend("topright",legend=legend, fill=fill, border=TRUE, bty="o", y.intersp = 0.7, cex=0.7)
 
 dev.off()
+
+
+
+###########################UNDER DEV#################################
+
+
 
 ##############################PLOT SELECTED VARIANTS ONLY ##########################
 
