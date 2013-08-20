@@ -217,7 +217,7 @@ ff[is.na(ff)] <- 0
 
 col2<-rowcol[1:2]
 
-colcols <- colorRampPalette(brewer.pal(11,"PRGn"))(1000)
+colcols <- rev(colorRampPalette(brewer.pal(11,"PRGn"))(1000))
 
 propinfo <- data.frame(	Sample = rep("", nrow(prop)),
 			Tertp = rep("", nrow(prop)),
@@ -348,7 +348,7 @@ xaxislab2=paste("Samples from Run", run, sep=" ")
 pdf(pdffile2, width=7, height=8)
 
 heatmap.2(gf, main=title, xlab=xaxislab2, ylab="Positions", scale="none", key = TRUE
-, cexCol=0.8, cexRow=0.6, col = hmcols, RowSideColors=rsc$Col, trace="none")
+, cexCol=0.8, cexRow=0.6, col = hmcols, ColSideColors=csc$Col, RowSideColors=rsc$Col, trace="none")
 
 legend("topright",legend=legend, fill=fill, border=TRUE, bty="o", y.intersp = 0.7, cex=0.7)
 
