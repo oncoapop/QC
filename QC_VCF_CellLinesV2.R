@@ -35,8 +35,8 @@ output=paste(dir,filename,sep="\\")
 
 csvfile=paste(output, "csv", sep=".")
 pdffile=paste(output, "pdf", sep=".")
-pdffile2=paste(output, "cluster.pdf", sep="")
-pdffile3=paste(output, "cluster2.pdf", sep="")
+pdffile2=paste(output, "cluster_allvar.pdf", sep="")
+pdffile3=paste(output, "cluster_selvar.pdf", sep="")
 vennfile=paste(output, "Venn.pdf", sep="-")
 
 title=filename
@@ -64,8 +64,6 @@ file_names
 # Extract all the VCFs into a concatenated VCF list
 vcf_list = lapply(file_names, readVcf, "hg19", sep = "\t")
 
-getwd()
-
 # Change the number of samples
 # check with "list(vcf_list)"
 samples <- length(vcf_list)
@@ -74,11 +72,9 @@ createCounter <- function(value) { function(i) { value <<- value+i} }
 count <- createCounter(1)
 
 
-#########################################################
-# THIS IS THE CURRENT WORKING MODULE THAT WORKS !!!!!   #
-#########################################################
-
-
+##################################################
+# THIS IS THE CURRENT  MODULE THAT WORKS !!!!!   #
+##################################################
 
 sumdf <- data.frame(	Sample_ID = rep("", samples),
 			Variants = rep(0, samples),
@@ -144,15 +140,18 @@ assign(paste("Nuclei", rj, sep=""), d.frame)
 
 write.table(sum1,file=csvfile,sep=",",row.names=FALSE,col.names=TRUE)
 
+#####################################
+##### END OF READ VCF MODULE ########
+#####################################
 
-###################################
 ## Processing position information
+## ie color label row side col as HCT, hTert or shared 
 
 # combine into one file
 hh<-rbind(hct116,htert)
 all<-rbind(shared,hh)
 
-# Select n colors
+# Select n colors (n+1 = for unclassfied)
 n <- length(table(all$V3))
 rowcol<-brewer.pal(n+1, "Accent")
 
@@ -187,13 +186,13 @@ legend[n+1]="unclassified"
 fill=colnames(table(posinfo[2:3]))
 fill[n+1]=rowcol[n+1]
 
-#####################################
+##################################################
 # Preparing the data for clustering (removing NAs)
 
 # Must be convert into a data.matrix (non-numeric converted to N/A)
 ef <- data.matrix(sum1[2:ncol(sum1)])
 
-# col headers - unique nuclei
+# col headers - unique samples
 names(sum1)
 
 # Filters out all the positions that failed in all samples
@@ -208,6 +207,8 @@ colnames(ef)
 ff<-ef[,order(as.numeric(colnames(ef)))]
 
 # If filt=NULL then all primers work so NA = zero
+# This assumes that all primers work and the reason that 
+# is NA is sample is because sample is WT (ie non variant)
 ff[is.na(ff)] <- 0
 
 ##############################################
@@ -217,7 +218,7 @@ ff[is.na(ff)] <- 0
 
 col2<-rowcol[1:2]
 
-colcols <- rev(colorRampPalette(brewer.pal(11,"PRGn"))(1000))
+colcols <- rev(colorRampPalette(brewer.pal(11,"PRGn"))(10000))
 
 propinfo <- data.frame(	Sample = rep("", nrow(prop)),
 			Tertp = rep("", nrow(prop)),
@@ -228,15 +229,15 @@ propinfo <- data.frame(	Sample = rep("", nrow(prop)),
 
 for (a in seq(nrow(prop)))
 	{
-	propinfo$Sample[a] <- prop$Sample[a]
+	propinfo$Sample[a] <- prop$Sample_ID[a]
 	propinfo$Tertp[a] <- prop$hTert[a]
 	propinfo$HCTp[a] <- prop$HCT116[a]
 
-	if (prop$hTert[a]*1000 < 1) 
+	if (prop$hTert[a]*10000 < 1) 
 		{
 		propinfo$Col[a] <- colcols[1]
 		} else {
-			propinfo$Col[a] <- colcols[prop$hTert[a]*1000]
+			propinfo$Col[a] <- colcols[prop$hTert[a]*10000]
 			}
 	}
 
@@ -247,7 +248,7 @@ csc <- data.frame(	Sam = rep("", ncol(ff)),
 			Col = rep("", ncol(ff)),
 			stringsAsFactors = FALSE)
 
-# Get the colors for different sample proportions
+# Get the colors based on different sample proportions
 for (j in seq(ncol(ff)))
 	{
 	match <- colnames(ff)[j]
@@ -286,13 +287,19 @@ for (j in seq(nrow(ff)))
 # hmcols<-colorRampPalette(c("dark green","red"))(100)
 hmcols <- colorRampPalette(brewer.pal(11,"Spectral"))(100)
 # display.brewer.all()
-################################################### HEatMaps2
+
+
+###################################################
+############      HeatMaps2     ###################
+###################################################
+
+####################### PLOT ALL VARIANTS ########################################## 
 
 title="HCT116-hTert Cell Mixing Expt (All Var Freq)"
 
 xaxislab2=paste("Samples from Run", run, sep=" ")
 
-pdf(pdffile3, width=7, height=8)
+pdf(pdffile2, width=7, height=8)
 
 heatmap.2(ff, main=title, xlab=xaxislab2, ylab="Positions", scale="none", key = TRUE
 , cexCol=0.8, cexRow=0.6, col = hmcols, RowSideColors=rsc$Col, ColSideColors=csc$Col, trace="none")
@@ -302,12 +309,7 @@ legend("topright",legend=legend, fill=fill, border=TRUE, bty="o", y.intersp = 0.
 dev.off()
 
 
-
-###########################UNDER DEV#################################
-
-
-
-##############################PLOT SELECTED VARIANTS ONLY ##########################
+############################## PLOT SELECTED VARIANTS ONLY ##########################
 
 # New matrix gf (selected positions)
 
@@ -337,15 +339,17 @@ for (j in seq(nrow(gf)))
 # Plot Colours
 # heatmap(ef, Rowv=NA, Colv=NA, col = heat.colors(1024), scale="column", margins=c(5,10))
 # hmcols<-colorRampPalette(c("dark green","red"))(100)
-hmcols <- colorRampPalette(brewer.pal(11,"Spectral"))(100)
+#hmcols <- colorRampPalette(brewer.pal(11,"Spectral"))(100)
 # display.brewer.all()
-################################################### HEatMaps2
+
+######### HeatMaps2
+## for selected variants
 
 title="HCT116-hTert Cell Mixing Expt (Sel Var Freq)"
 
 xaxislab2=paste("Samples from Run", run, sep=" ")
 
-pdf(pdffile2, width=7, height=8)
+pdf(pdffile3, width=7, height=8)
 
 heatmap.2(gf, main=title, xlab=xaxislab2, ylab="Positions", scale="none", key = TRUE
 , cexCol=0.8, cexRow=0.6, col = hmcols, ColSideColors=csc$Col, RowSideColors=rsc$Col, trace="none")
@@ -355,20 +359,5 @@ legend("topright",legend=legend, fill=fill, border=TRUE, bty="o", y.intersp = 0.
 dev.off()
 
 #########################END SELECTED VARIANTS ####################################
-########################################################## levelplot
 
-title="Level Plot QC of HCT116-hTert mixing expt"
-
-pdf(pdffile, width=6, height=6)
-levelplot(ff, main=title, xlab=xaxislab, ylab="Position", aspect="fill", cexCol=0.8, col.regions = hmcols)
-dev.off()
-
-
-pdf(pdffile, width=6, height=6)
-reg2 = regHeatmap(ff, legend=2,breaks=-4:4)
-plot(reg2)
-dev.off()
-
-
-########################################################
 
