@@ -1,0 +1,377 @@
+##################################################
+##  Script to plot bionomial results from 
+##             Cell mixing Expts				
+##			
+##	 Dr Damian Yap , Research Associate				
+##	 dyap@bccrc.ca  Version 2.0 (Aug 2013) 			
+##################################################
+
+
+# These commands must be specifed in order for this script to work
+# source("http://www.bioconductor.org/biocLite.R"); source#("http://www.bioconductor.org/biocLite.R"); biocLite("BSgenome"); biocLite#("BSgenome.Hsapiens.UCSC.hg19"); library
+
+('BSgenome.Hsapiens.UCSC.hg19')
+# install.packages("XLConnect")
+
+library(Biostrings)
+library("IRanges")
+library("GenomicRanges")
+library(XLConnect)
+library(foreign)
+library(lattice)
+require(Heatplus)
+library(limma)
+library(gplots)
+library(RColorBrewer)
+
+######################### VARIABLES ########################
+# To run this script change the setwd()
+setwd("C:\\Users\\dyap_000\\Documents\\R\\Cell_Lines_QC")
+
+#Date of Analysis
+date="130725"
+
+#check="depth"
+check = "freq"
+
+# Outputs
+# system('mkdir C:\\Users\\dyap_000\\Documents\\R\\SA494')
+dir="C:\\Users\\dyap_000\\Documents\\R\\Cell_Lines_QC"
+
+exptname=paste("BioNomGraph",date,sep="_")
+
+if (check == "depth") filename=paste(exptname,"reads",sep="_")
+if (check == "freq") filename=paste(exptname,"freq",sep="_")
+if (check == "calls") filename=paste(exptname,"calls",sep="_")
+
+output=paste(dir,filename,sep="\\")
+
+csvfile=paste(output, "csv", sep=".")
+pdffile=paste(output, "pdf", sep=".")
+pdffile2=paste(output, "cluster_allvar.pdf", sep="")
+pdffile3=paste(output, "cluster_selvar.pdf", sep="")
+
+########################## INPUTS ###########################
+
+# Read in all positions
+htert184<-read.table(file="htert_pos.txt")
+htert184$V3 <-"htert"
+hct116<-read.table(file="hct116_pos.txt")
+hct116$V3<-"hct116"
+shared<-read.table(file="shared_pos.txt")
+shared$V3 <- "shared"
+
+# Read in Sample Names and Mixing proportions
+prop<-read.table(file="MiSeq samples 18 Jul.txt" ,sep="\t", header=TRUE)
+
+#####################################
+#####   READ IN SUPP INFO    ########
+#####################################
+
+## Processing position information
+## ie color label row side col as HCT, hTert or shared 
+
+# combine into one file
+hh<-rbind(hct116,htert184)
+all<-rbind(shared,hh)
+
+# Select n colors (n+1 = for unclassfied)
+n <- length(table(all$V3))
+rowcol<-brewer.pal(n+1, "Accent")
+
+posinfo <- data.frame(	ID = rep("", nrow(all)),
+			Type = rep("", nrow(all)),
+			Col = rep("", nrow(all)),
+			stringsAsFactors = FALSE)
+
+for (a in seq(nrow(all)))
+	{
+	chr <- all$V1[a]
+	pos <- all$V2[a]
+	type <- all$V3[a]
+
+	posinfo$ID[a] <- paste(chr, pos, sep="_")
+	posinfo$Type[a] <- type
+
+	for ( b in seq(n) )
+		{
+		if (type == names(table(all$V3)[b])) color=rowcol[b]
+		}
+
+	posinfo$Col[a] <- color
+
+	}
+
+
+# Legend info posinfo$Types and posinfo$Col
+legend=rownames(table(posinfo[2:3]))
+legend[n+1]="unclassified"
+
+fill=colnames(table(posinfo[2:3]))
+fill[n+1]=rowcol[n+1]
+
+##################################################
+# Read and Process the data for clustering (removing NAs)
+
+# Input #1 is the primer excel sheet
+setwd(dir)
+
+pat=paste(paste("*target_list_stats",date,sep="_"),"xls*",sep=".")
+file_names = list.files(pattern=pat)
+
+files = paste(dir,file_names, sep="\\")
+maxfiles<-length(files)
+
+############# READINGS OF FILES ONE BY ONE #################
+
+for ( fi in seq(maxfiles) )
+	{
+	file = files[fi]
+	cellline = strsplit(file_names[fi], split="_")[[1]][1]
+	print(cellline)
+
+	#Load workbook one by one
+	wb <- loadWorkbook ( file , create = FALSE )
+
+	# Second worksheet which is variant allelic freq
+	# First worksheet is the depth
+	if (check == "depth") sheet <- c(getSheets(wb)[1])
+	if (check == "freq") sheet <- c(getSheets(wb)[2])
+
+	print(sheet)
+
+	assign(cellline, readWorksheet(wb, sheet = sheet, header = TRUE))
+	#, startRow = c(1,1), startCol = c(1,1), endCol = c(49,49), endRow = c(289,289)))
+	}
+
+########################################################################
+# <<cellines>> must use the name of the two cells lines in these lines
+# Col 1 is the ID, the data starts from col 2
+
+#hct
+hctf <- data.matrix(hct[2:ncol(hct)])
+
+# Put the ID back as rownames
+rownames(hctf) <- hct$target
+
+# Remove rows where whole row is NA
+ef <-hctf[rowSums(is.na(hctf))!=ncol(hctf), ]
+
+
+#htert
+tertf <- data.matrix(htert[2:ncol(htert)])
+
+# Put the ID back as rownames
+rownames(tertf) <- htert$target
+
+# Conditions where whole row is NA
+ff <-tertf[rowSums(is.na(tertf))!=ncol(tertf), ]
+
+
+######################################################################
+
+# hct116=hct=ef
+# htert184=htert=ff
+
+celllines = c("hct","htert")
+data = c("ef", "ff")
+
+##############################################
+
+# Label according to samplesheet
+# Select n colors (first 2 colors from row Col ie cell lines)
+
+col2<-rowcol[1:2]
+
+colcols <- rev(colorRampPalette(brewer.pal(11,"PRGn"))(10000))
+
+propinfo <- data.frame(	Sample = rep("", nrow(prop)),
+			Tertp = rep("", nrow(prop)),
+			HCTp = rep("", nrow(prop)),
+			Col = rep("", nrow(prop)),
+			stringsAsFactors = FALSE)
+
+
+for (a in seq(nrow(prop)))
+	{
+	propinfo$Sample[a] <- prop$Sample_ID[a]
+	propinfo$Tertp[a] <- prop$hTert[a]
+	propinfo$HCTp[a] <- prop$HCT116[a]
+
+	if (prop$hTert[a]*10000 < 1) 
+		{
+		propinfo$Col[a] <- colcols[1]
+		} else {
+			propinfo$Col[a] <- colcols[prop$hTert[a]*10000]
+			}
+	}
+
+
+######################### CSC FOR HCT116 ###############
+
+# Colside color matrix
+csce <- data.frame(	Sam = rep("", ncol(ef)),
+			Col = rep("", ncol(ef)),
+			stringsAsFactors = FALSE)
+
+# Get the colors based on different sample proportions
+for (j in seq(ncol(ef)))
+	{
+	match <- gsub("Sample","",colnames(ef)[j])
+	csce$Sam[j]<- match
+	test <- propinfo[propinfo[,1] %in% c(match),4]
+	if (length(test) != 0) 
+		{
+		csce$Col[j] <- test
+		} 
+
+	}
+
+######################### CSC FOR 184hTERT  ###############
+
+# Colside color matrix
+cscf <- data.frame(	Sam = rep("", ncol(ff)),
+			Col = rep("", ncol(ff)),
+			stringsAsFactors = FALSE)
+
+# Get the colors based on different sample proportions
+for (j in seq(ncol(ff)))
+	{
+	match <- gsub("Sample","",colnames(ff)[j])
+	cscf$Sam[j]<- match
+	test <- propinfo[propinfo[,1] %in% c(match),4]
+	if (length(test) != 0) 
+		{
+		cscf$Col[j] <- test
+		} 
+
+	}
+
+#########################################################################
+# Rows are different for the cell lines
+# note although nrows(ef)=nrow(ff), 48 pos are shared
+
+######################### RSC FOR HCT116 ###############
+# Rowside color matrix for hct116
+rsce <- data.frame(	ID = rep("", nrow(ef)),
+			Col = rep("", nrow(ef)),
+			stringsAsFactors = FALSE)
+
+# Get the colors for different types of positions
+for (j in seq(nrow(ef)))
+	{
+	match <- rownames(ef)[j]
+	rsce$ID[j]<- match
+	test <- posinfo[posinfo[,1] %in% c(match),3]
+	if (length(test) != 0) 
+		{
+		rsce$Col[j] <- test
+		} else {
+		# Unclassified positions
+		rsce$Col[j] <- rowcol[n+1]
+		}
+	
+	}
+######################### RSC FOR 184hTERT###############
+
+# Rowside color matrix for hTert
+rscf <- data.frame(	ID = rep("", nrow(ff)),
+			Col = rep("", nrow(ff)),
+			stringsAsFactors = FALSE)
+
+# Get the colors for different types of positions
+for (j in seq(nrow(ff)))
+	{
+	match <- rownames(ff)[j]
+	rscf$ID[j]<- match
+	test <- posinfo[posinfo[,1] %in% c(match),3]
+	if (length(test) != 0) 
+		{
+		rscf$Col[j] <- test
+		} else {
+		# Unclassified positions
+		rscf$Col[j] <- rowcol[n+1]
+		}
+
+	}
+
+
+#####################################################################
+# Merge into main data frame for sorting (cannot cluter rows due to NA)
+# HCT116
+rownames(rsce) <- rsce$ID
+efe <- merge(ef, rsce, by="row.names", all=TRUE)
+sortedef <- efe[ order(efe[,ncol(efe)]), ]
+norownames <- sortedef[1:(ncol(efe)-ncol(rsce))]
+hctplot<- as.matrix(norownames[2:ncol(norownames)])
+rownames(hctplot) <- norownames$Row.names
+
+# 184hTERT
+rownames(rscf) <- rscf$ID
+eff <- merge(ff, rscf, by="row.names", all=TRUE)
+sortedff <- eff[ order(eff[,ncol(eff)]), ]
+norownames <- sortedff[1:(ncol(eff)-ncol(rscf))]
+htertplot <- as.matrix(norownames[2:ncol(norownames)])
+rownames(htertplot) <- norownames$Row.names
+
+###################### END RSCe / RSCf ###############################
+# Plot Colours
+# heatmap(ef, Rowv=NA, Colv=NA, col = heat.colors(1024), scale="column", margins=c(5,10))
+# hmcols<-colorRampPalette(c("dark green","red"))(100)
+hmcols <- colorRampPalette(brewer.pal(11,"Spectral"))(100)
+# display.brewer.all()
+
+
+###################################################
+############      HeatMaps2     ###################
+###################################################
+
+####################### PLOT HCT116 POS ########################################## 
+
+title="Bionomial Results (HCT116 Pos only)"
+
+xaxislab2=paste("Samples from Analysis Date", date, sep=" ")
+
+pdf("HCT116_BioNom_cluster.pdf", width=7, height=8)
+
+heatmap.2(hctplot, dendrogram = c("column"), Rowv = FALSE, Colv=TRUE, main=title, xlab=xaxislab2, ylab="Positions", scale="none", key = TRUE, cexCol=0.8, cexRow=0.6, col = 
+
+hmcols, RowSideColors=sortedef$Col, ColSideColors=csce$Col, trace="none")
+
+legend("topright",legend=legend, fill=fill, border=TRUE, bty="o", y.intersp = 0.7, cex=0.7)
+
+dev.off()
+
+####################### PLOT HTERT POS ########################################## 
+
+title="Bionomial Results (184-hTert Pos only)"
+
+xaxislab2=paste("Samples from Analysis Date", date, sep=" ")
+
+pdf("hTert_BioNom_cluster.pdf", width=7, height=8)
+
+heatmap.2(htertplot, dendrogram = c("column"), Rowv = FALSE, Colv=TRUE, main=title, xlab=xaxislab2, ylab="Positions", scale="none", key = TRUE, cexCol=0.8, cexRow=0.6, col = 
+
+hmcols, RowSideColors=sortedff$Col, ColSideColors=csce$Col, trace="none")
+
+legend("topright",legend=legend, fill=fill, border=TRUE, bty="o", y.intersp = 0.7, cex=0.7)
+
+dev.off()
+
+
+########END
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
